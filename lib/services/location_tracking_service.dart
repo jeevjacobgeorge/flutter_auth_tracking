@@ -1,6 +1,6 @@
+import 'package:background_location/background_location.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class LocationTrackingService {
@@ -16,38 +16,59 @@ class LocationTrackingService {
     return permission.isGranted;
   }
 
-  // Method to get current location and save it to Firebase
-  Future<void> trackUserLocation() async {
-    // Check if location permission is granted
+  // Method to start background location tracking
+  Future<void> startBackgroundTracking() async {
     bool isPermissionGranted = await _requestLocationPermission();
     if (!isPermissionGranted) {
       print("Location permission denied");
       return;
     }
 
-    // Get current location using the latest API (no `desiredAccuracy` here)
-    Position position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,  // Adjust accuracy level
-        distanceFilter: 10,  // Minimum distance (in meters) to trigger a new location update
-      ),
+    // Set Android-specific notification (only for Android)
+    await BackgroundLocation.setAndroidNotification(
+      title: "Location Tracking",
+      message: "We are tracking your location in the background.",
+      icon: "@mipmap/ic_launcher",  // Set a proper icon from your assets
     );
 
-    // Get current user ID (UID)
+    // Set the interval (in milliseconds) between location updates (Android only)
+    await BackgroundLocation.setAndroidConfiguration(20000);  // 20000 ms = 20 second
+
+    // Start the background location service
+    await BackgroundLocation.startLocationService();
+
+    // Listen to location updates
+    BackgroundLocation.getLocationUpdates((location) {
+      print("Location update: Lat: ${location.latitude}, Long: ${location.longitude}");
+
+      // Update the location in Firebase
+      _updateLocationToFirebase(location);
+    });
+  }
+
+  // Method to stop background location tracking
+  Future<void> stopBackgroundTracking() async {
+    await BackgroundLocation.stopLocationService();
+  }
+
+  // Method to update location to Firebase
+  Future<void> _updateLocationToFirebase(Location location) async {
     User? user = _auth.currentUser;
     if (user == null) {
       print("User is not logged in.");
       return;
     }
 
-    // Save location to Firebase Realtime Database
+    // Save the location to Firebase Realtime Database
     DatabaseReference ref = _database.ref('users/${user.uid}/location');
+    
+
     await ref.set({
-      'latitude': position.latitude,
-      'longitude': position.longitude,
+      'latitude': location.latitude,
+      'longitude': location.longitude,
       'timestamp': ServerValue.timestamp,
     });
 
-    print("Location saved: Lat: ${position.latitude}, Long: ${position.longitude}");
+    print("Location saved: Lat: ${location.latitude}, Long: ${location.longitude} ");
   }
 }
