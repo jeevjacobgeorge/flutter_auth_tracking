@@ -22,5 +22,15 @@
   <string>1.0</string>
   <key>MinimumOSVersion</key>
   <string>12.0</string>
+
+  <!-- Location Usage Descriptions -->
+  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+  <string>We need access to your location in the background for tracking purposes</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>We need access to your location for tracking purposes</string>
+  <key>UIBackgroundModes</key>
+  <array>
+    <string>location</string>
+  </array>
 </dict>
 </plist>
